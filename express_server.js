@@ -27,12 +27,17 @@ app.get("/urls", (req, res) => {
 //app.get already knows where "urls_index" is because EJS automatically knows to look inside
   //the views directory for any template files that have the extension ".ejs"
 
+app.get("/urls/new", (req, res) => {
+  res.render("urls_new");
+});
+//this is a GET route to render the urls_new.ejs template in the browser to present the form
+  //to the user
+
   app.get("/urls/:shortURL", (req, res) => {
     const templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL] };
     console.log(req.params)
     res.render("urls_show", templateVars);
   });
-
 
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
