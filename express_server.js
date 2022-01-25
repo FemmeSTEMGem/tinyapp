@@ -11,6 +11,10 @@ const urlDatabase = {
   "9sm5xK": "http://www.google.com"
 };
 
+function generateRandomString() {
+  let answer = Math.random().toString(36).slice(-6)
+  return answer
+}
 
 //GETS
 app.get("/", (req, res) => {
@@ -48,7 +52,11 @@ app.get("/urls/:shortURL", (req, res) => {
 //POSTS
 app.post("/urls", (req, res) => {
   console.log(req.body);  // Log the POST request body to the console
-  res.send("Ok");         // Respond with 'Ok' (we will replace this)
+  
+  const shortURL = generateRandomString()
+  urlDatabase[shortURL] = req.body.longURL
+  
+  res.redirect(`/urls/${shortURL}`);
 });
 
 app.listen(PORT, () => {
