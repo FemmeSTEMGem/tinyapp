@@ -6,6 +6,9 @@ app.set("view engine", "ejs");
 const bodyParser = require("body-parser");
 app.use(bodyParser.urlencoded({extended: true}));
 
+const cookieParser = require('cookie-parser')
+app.use(cookieParser())
+
 const urlDatabase = {
   "b2xVn2": "http://www.lighthouselabs.ca",
   "9sm5xK": "http://www.google.com"
@@ -15,6 +18,8 @@ function generateRandomString() {
   let answer = Math.random().toString(36).slice(-6)
   return answer
 }
+
+
 
 //----------------------------------------------GETS-----------------------------------------//
 
@@ -32,7 +37,7 @@ app.get("/hello", (req, res) => {
 });
 
 app.get("/urls", (req, res) => {
-  const templateVars = { urls: urlDatabase };
+  const templateVars = { urls: urlDatabase, username: req.cookies["username"], };
   res.render("urls_index", templateVars);
 });
 //app.get already knows where "urls_index" is because EJS automatically knows to look inside
@@ -45,8 +50,8 @@ app.get("/urls/new", (req, res) => {
   //to the user
 
 app.get("/urls/:shortURL", (req, res) => {
-  const templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL] };
-  console.log("req.params: ", req.params)
+  const templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL], username: req.cookies["username"], };
+  // console.log("req.params: ", req.params)
   res.render("urls_show", templateVars);
 });
 
@@ -61,9 +66,10 @@ app.get("/urls/:shortURL/edit", (req, res) => {
 })
 
 
+
 //----------------------------------------------POSTS-----------------------------------------//
 app.post("/urls", (req, res) => {
-  console.log("req.body: ", req.body);  // Log the POST request body to the console
+  // console.log("req.body: ", req.body);  // Log the POST request body to the console
   
   const shortURL = generateRandomString()
   urlDatabase[shortURL] = req.body.longURL
@@ -72,7 +78,7 @@ app.post("/urls", (req, res) => {
 });
 
 app.post("/urls/:shortURL/delete", (req, res) => {
-  console.log("req.body: ", req.body);  // Log the POST request body to the console
+  // console.log("req.body: ", req.body);  // Log the POST request body to the console
   const shortURL = req.params.shortURL
   
   delete urlDatabase[shortURL]
@@ -81,10 +87,6 @@ app.post("/urls/:shortURL/delete", (req, res) => {
 });
 
 app.post("/urls/:id", (req, res) => {
-  // console.log(req.params)
-  // console.log(req.body)
-  // res.send("ok")
-  // console.log('req.body', req.body)
   const shortURL = req.params.id
   urlDatabase[shortURL] = req.body.longURL
 
@@ -92,6 +94,16 @@ app.post("/urls/:id", (req, res) => {
 })
 //Route handling for longURL editing
 
+app.post("/login", (req, res) => {
+  res.cookie("username", req.body.username) //res.cookie(cookie_name, cookie_value)
+
+  res.redirect('/urls');
+})
+
+
+//----------------------------------------------COOKIES-----------------------------------------//
+//cookie-parser serves as Express middleware - it helps us read the values from the cookie
+//To set the values on a cookie we can use res.cookie (http://expressjs.com/en/api.html#res.cookie)
 
 
 
