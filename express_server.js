@@ -44,7 +44,8 @@ app.get("/urls", (req, res) => {
   //the views directory for any template files that have the extension ".ejs"
 
 app.get("/urls/new", (req, res) => {
-  res.render("urls_new");
+  const templateVars = { username: req.cookies["username"] }
+  res.render("urls_new", templateVars);
 });
 //this is a GET route to render the urls_new.ejs template in the browser to present the form
   //to the user
@@ -96,6 +97,7 @@ app.post("/urls/:id", (req, res) => {
 
 app.post("/login", (req, res) => {
   res.cookie("username", req.body.username) //res.cookie(cookie_name, cookie_value)
+  console.log(req.body.username)
 
   res.redirect('/urls');
 })
