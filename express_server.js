@@ -16,7 +16,9 @@ function generateRandomString() {
   return answer
 }
 
-//GETS
+//----------------------------------------------GETS-----------------------------------------//
+
+
 app.get("/", (req, res) => {
   res.send("Hello!");
 });
@@ -53,8 +55,13 @@ app.get("/u/:shortURL", (req, res) => {
   res.redirect(longURL);
 });
 
+app.get("/urls/:shortURL/edit", (req, res) => {
+  const shortURL = req.params.shortURL
+  res.redirect(`/urls/${shortURL}`)
+})
 
-//POSTS
+
+//----------------------------------------------POSTS-----------------------------------------//
 app.post("/urls", (req, res) => {
   console.log("req.body: ", req.body);  // Log the POST request body to the console
   
@@ -69,9 +76,26 @@ app.post("/urls/:shortURL/delete", (req, res) => {
   const shortURL = req.params.shortURL
   
   delete urlDatabase[shortURL]
-  
+
   res.redirect('/urls/');
 });
+
+app.post("/urls/:id", (req, res) => {
+  // console.log(req.params)
+  // console.log(req.body)
+  // res.send("ok")
+  // console.log('req.body', req.body)
+  const shortURL = req.params.id
+  urlDatabase[shortURL] = req.body.longURL
+
+  res.redirect('/urls');
+})
+//Route handling for longURL editing
+
+
+
+
+//----------------------------------------------LISTEN-----------------------------------------//
 
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
