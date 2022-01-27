@@ -107,6 +107,13 @@ app.get("/register", (req, res) => {
   //parts that mention templateVars but it broke, so I'm leaving it for now
 
 
+//RENDERING LOGIN FORM PAGE
+app.get("/login", (req, res) => {
+  const templateVars = { user: users[req.cookies["user_id"]]  }
+  res.render("login_form", templateVars);
+});
+
+
 //----------------------------------------------POSTS-----------------------------------------//
 
 //CREATES SHORT URL
