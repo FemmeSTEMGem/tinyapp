@@ -1,3 +1,5 @@
+//------------------------------------------MODULES/LIBRARIES-----------------------------------------//
+
 const express = require("express");
 const app = express();
 const PORT = 8080; // default port 8080
@@ -8,6 +10,10 @@ app.use(bodyParser.urlencoded({extended: true}));
 
 const cookieParser = require('cookie-parser')
 app.use(cookieParser())
+
+
+//----------------------------------------------STORAGE-----------------------------------------//
+
 
 const urlDatabase = {
   "b2xVn2": "http://www.lighthouselabs.ca",
@@ -27,6 +33,9 @@ const users = {
   }
 }
 
+//----------------------------------------------HELPER FUNCTIONS-----------------------------------------//
+
+
 function generateRandomString() {
   return Math.random().toString(36).slice(-6)
 }
@@ -35,12 +44,13 @@ function generateRandomID() {
   return Math.floor(Math.random() * 2000) + 1
 }
 
-const emailFinder = function findEmail(email) {
-  for (let key in users) {
-    if (users[key]["email"] === email)
-    return true
+const findUserByEmail = (email) => {
+  for (let userID in users) {
+    const user = users[userID]
+    if (user.email === email)
+    return user
   }
-  return false
+  return null
 }
 
 
@@ -63,7 +73,7 @@ app.get("/hello", (req, res) => {
   res.send("<html><body>Hello <b>World</b></body></html>\n");
 });
 
-//RENDERING URLS INDEX PAGE/////////////////////////////////////////////////////////////////////
+//RENDERING URLS INDEX PAGE
 app.get("/urls", (req, res) => {
   const templateVars = { urls: urlDatabase, user: users[req.cookies["user_id"]] };
   res.render("urls_index", templateVars);
@@ -142,14 +152,32 @@ app.post("/urls/:id", (req, res) => {
 
 //ADDS A COOKIE UPON LOGIN
 app.post("/login", (req, res) => {
-  res.cookie("username", req.body.username) //res.cookie(cookie_name, cookie_value)
+  const email = req.body.email
+  const password = req.body.password
+  const user = findUserByEmail(email)
+  console.log(email)
+  console.log(user)
+  console.log(user.password)
+  if (email === "" || password === "") {
+    res.send("404 Error. Email and/or Password was blank")
+  }
 
+  if (!user) {
+      res.send("403 Error. Email was not found.")
+  }
+
+  if (user.password !== password) {
+    res.send("403 Error. Password incorrect.")
+  }
+
+  res.cookie('user_id', user.id)
   res.redirect('/urls');
 })
+//res.cookie(cookie_name, cookie_value)
 
-//LOGOUT CLEARS THE username COOKIE - REDIRECTS TO /urls
+//LOGOUT CLEARS THE user_id COOKIE - REDIRECTS TO /urls
 app.post("/logout", (req, res) => {
-  res.clearCookie("username")
+  res.clearCookie("user_id")
 
   res.redirect('/urls');
 })
@@ -159,24 +187,28 @@ app.post("/register", (req, res) => {
   const id = generateRandomID();
   const email = req.body.email;
   const password = req.body.password;
+  const user = findUserByEmail(email)
 
-  if (req.body.email === "" || req.body.password === "") {
+  if (email === "" || password === "") {
     res.send("404 Error. Email and/or Password was blank")
-  } else if (emailFinder(email)) {
+  } else if (user) {
     res.send("404 Error. Email is already in use.")
   } else {
-  res.cookie('user_id', id)
 
-  const newUser = {
+    const newUser = {
     id: id, 
     email: email,
     password: password
   }
+
   users[id] = newUser 
+
+  res.cookie('user_id', newUser.id)
 
   res.redirect('/urls');
 
   }
+  console.log(users)
 })
 
 //----------------------------------------------COOKIES-----------------------------------------//
