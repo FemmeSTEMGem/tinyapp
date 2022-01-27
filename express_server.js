@@ -15,9 +15,20 @@ app.use(cookieParser())
 //----------------------------------------------STORAGE-----------------------------------------//
 
 
+// const urlDatabase = {
+//   "b2xVn2": "http://www.lighthouselabs.ca",
+//   "9sm5xK": "http://www.google.com"
+// };
+
 const urlDatabase = {
-  "b2xVn2": "http://www.lighthouselabs.ca",
-  "9sm5xK": "http://www.google.com"
+  b6UTxQ: {
+      longURL: "https://www.tsn.ca",
+      userID: "aJ48lW"
+  },
+  i3BoGr: {
+      longURL: "https://www.google.ca",
+      userID: "aJ48lW"
+  }
 };
 
 const users = {
@@ -58,20 +69,24 @@ const findUserByEmail = (email) => {
 
 //----------------------------------------------GETS-----------------------------------------//
 
+
 //MAIN PAGE
 app.get("/", (req, res) => {
   res.send("Hello!");
 });
+
 
 //URL DATABASE
 app.get("/urls.json", (req, res) => {
   res.json(urlDatabase);
 });
 
+
 //HELLO PAGE
 app.get("/hello", (req, res) => {
   res.send("<html><body>Hello <b>World</b></body></html>\n");
 });
+
 
 //RENDERING URLS INDEX PAGE
 app.get("/urls", (req, res) => {
@@ -81,32 +96,44 @@ app.get("/urls", (req, res) => {
 //app.get already knows where "urls_index" is because EJS automatically knows to look inside
   //the views directory for any template files that have the extension ".ejs"
 
-//RENDERING URLS NEW PAGE
+
+//RENDERING URLS NEW PAGE - REDIRECTS TO /login IF NOT LOGGED IN
 app.get("/urls/new", (req, res) => {
+  if (users[req.cookies["user_id"]]) {
   const templateVars = { user: users[req.cookies["user_id"]]  }
   res.render("urls_new", templateVars);
+  } else {
+    res.redirect('/login')
+  }
 });
 //this is a GET route to render the urls_new.ejs template in the browser to present the form
   //to the user
 
+
   //RENDERING URLS SHOW PAGE
 app.get("/urls/:shortURL", (req, res) => {
-  const templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL], user: users[req.cookies["user_id"]]  };
-  // console.log("req.params: ", req.params)
+  if (urlDatabase[req.params.shortURL]) {
+  const templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL].longURL, user: users[req.cookies["user_id"]]  };
   res.render("urls_show", templateVars);
+  } else {
+    res.send("That ID doesn't exist")
+  }
 });
+
 
 //u/:shortURL REDIRECTS TO longURL
 app.get("/u/:shortURL", (req, res) => {
-  const longURL = urlDatabase[req.params.shortURL]
+  const longURL = urlDatabase[req.params.shortURL].longURL
   res.redirect(longURL);
 });
+
 
 //urls/:shortURL/edit REDIRECTS TO urls/shortURL
 app.get("/urls/:shortURL/edit", (req, res) => {
   const shortURL = req.params.shortURL
   res.redirect(`/urls/${shortURL}`)
 })
+
 
 //RENDERING REGISTRATION PAGE
 app.get("/register", (req, res) => {
@@ -129,10 +156,16 @@ app.get("/login", (req, res) => {
 //CREATES SHORT URL
 app.post("/urls", (req, res) => {
   const shortURL = generateRandomString()
-  urlDatabase[shortURL] = req.body.longURL
-  
+  const newDatabaseEntry = {
+    longURL: req.body.longURL,
+    userID: req.cookies.user_id
+  }
+  urlDatabase[shortURL] = newDatabaseEntry
+
   res.redirect(`/urls/${shortURL}`);
+  console.log("urlDatabase: ", urlDatabase)
 });
+
 
 //DELETES A RECORD - REDIRECT TO /urls
 app.post("/urls/:shortURL/delete", (req, res) => {
@@ -142,22 +175,21 @@ app.post("/urls/:shortURL/delete", (req, res) => {
   res.redirect('/urls/');
 });
 
+
 //EDITS A longURL - REDIRECTS TO /urls
 app.post("/urls/:id", (req, res) => {
   const shortURL = req.params.id
-  urlDatabase[shortURL] = req.body.longURL
+  urlDatabase[shortURL].longURL = req.body.longURL
 
   res.redirect('/urls');
 })
+
 
 //ADDS A COOKIE UPON LOGIN
 app.post("/login", (req, res) => {
   const email = req.body.email
   const password = req.body.password
   const user = findUserByEmail(email)
-  console.log(email)
-  console.log(user)
-  console.log(user.password)
   if (email === "" || password === "") {
     res.send("404 Error. Email and/or Password was blank")
   }
@@ -175,12 +207,14 @@ app.post("/login", (req, res) => {
 })
 //res.cookie(cookie_name, cookie_value)
 
+
 //LOGOUT CLEARS THE user_id COOKIE - REDIRECTS TO /urls
 app.post("/logout", (req, res) => {
   res.clearCookie("user_id")
 
   res.redirect('/urls');
 })
+
 
 //ADDS A NEW USER - REDIRECTS TO /urls
 app.post("/register", (req, res) => {
@@ -208,8 +242,8 @@ app.post("/register", (req, res) => {
   res.redirect('/urls');
 
   }
-  console.log(users)
 })
+
 
 //----------------------------------------------COOKIES-----------------------------------------//
 //cookie-parser serves as Express middleware - it helps us read the values from the cookie
