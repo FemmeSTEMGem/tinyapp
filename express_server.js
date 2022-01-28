@@ -238,7 +238,7 @@ app.post("/urls/:shortURL", (req, res) => {
 })
 
 
-//ADDS A COOKIE UPON LOGIN
+//LOGIN USER + ADDS A COOKIE
 app.post("/login", (req, res) => {
   const email = req.body.email
   const password = req.body.password
@@ -248,12 +248,14 @@ app.post("/login", (req, res) => {
     res.send("404 Error. Email and/or Password was blank")
   }
 
-  if (!user || user.password !== password) {
+  // if (!user || user.password !== password) {
+    if (!user || !bcrypt.compare(password, user.password)) {
       res.send("403 Error")
   }
 
   res.cookie('user_id', user.id)
   res.redirect('/urls');
+  console.log("After login users object: ", users)
 })
 
 
@@ -292,6 +294,7 @@ app.post("/register", (req, res) => {
   res.cookie('user_id', newUser.id)
 
   res.redirect('/urls');
+  console.log("After registration users object: ", users)
 })
 
 
