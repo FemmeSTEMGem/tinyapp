@@ -15,32 +15,27 @@ app.use(cookieParser())
 //----------------------------------------------STORAGE-----------------------------------------//
 
 
-// const urlDatabase = {
-//   "b2xVn2": "http://www.lighthouselabs.ca",
-//   "9sm5xK": "http://www.google.com"
-// };
-
 const urlDatabase = {
   b6UTxQ: {
       longURL: "https://www.tsn.ca",
-      userID: "aJ48lW"
+      userID: "userRandomID"
   },
   i3BoGr: {
       longURL: "https://www.google.ca",
-      userID: "aJ48lW"
+      userID: "user2RandomID"
   }
 };
 
 const users = {
   "userRandomID": {
     id: "userRandomID", 
-    email: "user@example.com", 
-    password: "purple-monkey-dinosaur"
+    email: "a@a.com", 
+    password: "123"
   },
   "user2RandomID": {
     id: "user2RandomID", 
-    email: "user2@example.com", 
-    password: "dishwasher-funk"
+    email: "b@b.com", 
+    password: "123"
   }
 }
 
@@ -64,7 +59,41 @@ const findUserByEmail = (email) => {
   return null
 }
 
+const urlsForUser = (id) => {
+  const filteredDatabase = { }
+  const shortURLs = Object.keys(urlDatabase)
 
+  shortURLs.forEach((shortURL) => {
+    const foundRecord = urlDatabase[shortURL];
+    
+    if (foundRecord.userID === id) {
+      filteredDatabase[shortURL] = foundRecord
+    }
+  })
+  return filteredDatabase
+}
+
+const rejectUnauthenticatedUser = (req, res) => {
+  const userID = req.cookies["user_id"]
+
+  if (!userID) {
+    return res.send('Please login first')
+  }
+}
+
+const rejectUnauthorisedUser = (req, res) => {
+  const shortURL = req.params.shortURL
+  const userID = req.cookies["user_id"]
+  const foundRecord = urlDatabase[shortURL]
+
+  if (!foundRecord || foundRecord.userID !== userID) {
+    return res.send('Not found')
+  }
+
+  if (userID !== foundRecord.userID) {
+    return res.send('Unauthorised access')
+  }
+}
 
 
 //----------------------------------------------GETS-----------------------------------------//
@@ -72,13 +101,14 @@ const findUserByEmail = (email) => {
 
 //MAIN PAGE
 app.get("/", (req, res) => {
-  res.send("Hello!");
+  res.send("Hello, welcome to the Main Page!");
 });
 
 
 //URL DATABASE
 app.get("/urls.json", (req, res) => {
-  res.json(urlDatabase);
+  rejectUnauthenticatedUser(req, res)
+  res.json(urlsForUser(req.cookies["user_id"]));
 });
 
 
@@ -90,39 +120,52 @@ app.get("/hello", (req, res) => {
 
 //RENDERING URLS INDEX PAGE
 app.get("/urls", (req, res) => {
-  const templateVars = { urls: urlDatabase, user: users[req.cookies["user_id"]] };
-  res.render("urls_index", templateVars);
+  rejectUnauthenticatedUser(req, res)
+  
+  const userID = req.cookies["user_id"]
+  const templateVars = { urls: urlsForUser(userID), user: users[userID] };
+  
+  res.render("urls_index", templateVars);    
 });
-//app.get already knows where "urls_index" is because EJS automatically knows to look inside
-  //the views directory for any template files that have the extension ".ejs"
 
 
-//RENDERING URLS NEW PAGE - REDIRECTS TO /login IF NOT LOGGED IN
+//RENDERING URLS NEW PAGE
 app.get("/urls/new", (req, res) => {
-  if (users[req.cookies["user_id"]]) {
-  const templateVars = { user: users[req.cookies["user_id"]]  }
+  rejectUnauthenticatedUser(req, res)
+  
+  const currentUser = users[req.cookies["user_id"]];
+  const templateVars = { user: currentUser }
+  
   res.render("urls_new", templateVars);
-  } else {
-    res.redirect('/login')
-  }
 });
-//this is a GET route to render the urls_new.ejs template in the browser to present the form
-  //to the user
 
 
-  //RENDERING URLS SHOW PAGE
+//RENDERING URLS SHOW PAGE - in Compass, this is referred to as /urls/:id
 app.get("/urls/:shortURL", (req, res) => {
-  if (urlDatabase[req.params.shortURL]) {
-  const templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL].longURL, user: users[req.cookies["user_id"]]  };
-  res.render("urls_show", templateVars);
-  } else {
-    res.send("That ID doesn't exist")
+  rejectUnauthenticatedUser(req, res)
+  rejectUnauthorisedUser(req, res)
+
+  const shortURL = req.params.shortURL
+  const foundRecord = urlsForUser(req.cookies["user_id"])
+  
+  if (!foundRecord) {
+    return res.send(`Unable to find a record with short URL ${shortURL}.`)
   }
+  
+  const templateVars = {
+    shortURL,
+    longURL: foundRecord.longURL,
+    user: users[req.cookies["user_id"]]
+  };
+  
+  res.render("urls_show", templateVars);
 });
 
 
 //u/:shortURL REDIRECTS TO longURL
 app.get("/u/:shortURL", (req, res) => {
+  // TODO: Redirect to a generic error page if a record can't be found.
+  
   const longURL = urlDatabase[req.params.shortURL].longURL
   res.redirect(longURL);
 });
@@ -130,7 +173,11 @@ app.get("/u/:shortURL", (req, res) => {
 
 //urls/:shortURL/edit REDIRECTS TO urls/shortURL
 app.get("/urls/:shortURL/edit", (req, res) => {
+  rejectUnauthenticatedUser(req, res)
+  rejectUnauthorisedUser(req, res)
+  
   const shortURL = req.params.shortURL
+  
   res.redirect(`/urls/${shortURL}`)
 })
 
@@ -140,8 +187,6 @@ app.get("/register", (req, res) => {
   const templateVars = { user: users[req.cookies["user_id"]]  }
   res.render("registration", templateVars);
 });
-//seems to go where it needs to go, but I'm not sure if this is right...I tried removing the
-  //parts that mention templateVars but it broke, so I'm leaving it for now
 
 
 //RENDERING LOGIN FORM PAGE
@@ -155,6 +200,8 @@ app.get("/login", (req, res) => {
 
 //CREATES SHORT URL
 app.post("/urls", (req, res) => {
+  rejectUnauthenticatedUser(req, res)
+  
   const shortURL = generateRandomString()
   const newDatabaseEntry = {
     longURL: req.body.longURL,
@@ -163,13 +210,16 @@ app.post("/urls", (req, res) => {
   urlDatabase[shortURL] = newDatabaseEntry
 
   res.redirect(`/urls/${shortURL}`);
-  console.log("urlDatabase: ", urlDatabase)
 });
 
 
 //DELETES A RECORD - REDIRECT TO /urls
 app.post("/urls/:shortURL/delete", (req, res) => {
+  rejectUnauthenticatedUser(req, res)
+  rejectUnauthorisedUser(req, res)
+
   const shortURL = req.params.shortURL
+
   delete urlDatabase[shortURL]
 
   res.redirect('/urls/');
@@ -177,8 +227,10 @@ app.post("/urls/:shortURL/delete", (req, res) => {
 
 
 //EDITS A longURL - REDIRECTS TO /urls
-app.post("/urls/:id", (req, res) => {
-  const shortURL = req.params.id
+app.post("/urls/:shortURL", (req, res) => {
+  rejectUnauthenticatedUser(req, res)
+  rejectUnauthorisedUser(req, res)
+
   urlDatabase[shortURL].longURL = req.body.longURL
 
   res.redirect('/urls');
@@ -190,22 +242,18 @@ app.post("/login", (req, res) => {
   const email = req.body.email
   const password = req.body.password
   const user = findUserByEmail(email)
+  
   if (email === "" || password === "") {
     res.send("404 Error. Email and/or Password was blank")
   }
 
-  if (!user) {
-      res.send("403 Error. Email was not found.")
-  }
-
-  if (user.password !== password) {
-    res.send("403 Error. Password incorrect.")
+  if (!user || user.password !== password) {
+      res.send("403 Error")
   }
 
   res.cookie('user_id', user.id)
   res.redirect('/urls');
 })
-//res.cookie(cookie_name, cookie_value)
 
 
 //LOGOUT CLEARS THE user_id COOKIE - REDIRECTS TO /urls
@@ -224,15 +272,17 @@ app.post("/register", (req, res) => {
   const user = findUserByEmail(email)
 
   if (email === "" || password === "") {
-    res.send("404 Error. Email and/or Password was blank")
-  } else if (user) {
-    res.send("404 Error. Email is already in use.")
-  } else {
+    return res.send("404 Error. Email and/or Password was blank")
+  }
+  
+  if (user) {
+    return res.send("404 Error. Email is already in use.")
+  }
 
-    const newUser = {
-    id: id, 
-    email: email,
-    password: password
+  const newUser = {
+  id,
+  email,
+  password,
   }
 
   users[id] = newUser 
@@ -240,15 +290,7 @@ app.post("/register", (req, res) => {
   res.cookie('user_id', newUser.id)
 
   res.redirect('/urls');
-
-  }
 })
-
-
-//----------------------------------------------COOKIES-----------------------------------------//
-//cookie-parser serves as Express middleware - it helps us read the values from the cookie
-//To set the values on a cookie we can use res.cookie (http://expressjs.com/en/api.html#res.cookie)
-
 
 
 //----------------------------------------------LISTEN-----------------------------------------//
