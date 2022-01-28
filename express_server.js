@@ -11,6 +11,8 @@ app.use(bodyParser.urlencoded({extended: true}));
 const cookieParser = require('cookie-parser')
 app.use(cookieParser())
 
+const bcrypt = require('bcryptjs');
+
 
 //----------------------------------------------STORAGE-----------------------------------------//
 
@@ -163,10 +165,9 @@ app.get("/urls/:shortURL", (req, res) => {
 
 
 //u/:shortURL REDIRECTS TO longURL
-app.get("/u/:shortURL", (req, res) => {
-  // TODO: Redirect to a generic error page if a record can't be found.
-  
+app.get("/u/:shortURL", (req, res) => {  
   const longURL = urlDatabase[req.params.shortURL].longURL
+
   res.redirect(longURL);
 });
 
@@ -269,6 +270,7 @@ app.post("/register", (req, res) => {
   const id = generateRandomID();
   const email = req.body.email;
   const password = req.body.password;
+  const hashedPassword = bcrypt.hashSync(password, 10);
   const user = findUserByEmail(email)
 
   if (email === "" || password === "") {
@@ -282,7 +284,7 @@ app.post("/register", (req, res) => {
   const newUser = {
   id,
   email,
-  password,
+  password: hashedPassword,
   }
 
   users[id] = newUser 
