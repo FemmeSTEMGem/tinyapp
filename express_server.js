@@ -23,11 +23,11 @@ const bcrypt = require('bcryptjs');
 const urlDatabase = {
   b6UTxQ: {
       longURL: "https://www.tsn.ca",
-      userID: "userRandomID"
+      user_id: "userRandomID"
   },
   i3BoGr: {
       longURL: "https://www.google.ca",
-      userID: "user2RandomID"
+      user_id: "user2RandomID"
   }
 };
 
@@ -56,8 +56,8 @@ function generateRandomID() {
 }
 
 const findUserByEmail = (email) => {
-  for (let userID in users) {
-    const user = users[userID]
+  for (let user_id in users) {
+    const user = users[user_id]
     if (user.email === email)
     return user
   }
@@ -71,7 +71,7 @@ const urlsForUser = (id) => {
   shortURLs.forEach((shortURL) => {
     const foundRecord = urlDatabase[shortURL];
     
-    if (foundRecord.userID === id) {
+    if (foundRecord.user_id === id) {
       filteredDatabase[shortURL] = foundRecord
     }
   })
@@ -79,23 +79,23 @@ const urlsForUser = (id) => {
 }
 
 const rejectUnauthenticatedUser = (req, res) => {
-  const userID = req.cookies["user_id"]
+  const user_id = req.session.user_id
 
-  if (!userID) {
+  if (!user_id) {
     return res.send('Please login first')
   }
 }
 
 const rejectUnauthorisedUser = (req, res) => {
   const shortURL = req.params.shortURL
-  const userID = req.cookies["user_id"]
+  const user_id = req.session.user_id
   const foundRecord = urlDatabase[shortURL]
 
-  if (!foundRecord || foundRecord.userID !== userID) {
+  if (!foundRecord || foundRecord.user_id !== user_id) {
     return res.send('Not found')
   }
 
-  if (userID !== foundRecord.userID) {
+  if (user_id !== foundRecord.user_id) {
     return res.send('Unauthorised access')
   }
 }
@@ -106,20 +106,20 @@ const rejectUnauthorisedUser = (req, res) => {
 
 //MAIN PAGE
 app.get("/", (req, res) => {
-  res.send("Hello, welcome to the Main Page!");
+  return res.send("Hello, welcome to the Main Page!");
 });
 
 
 //URL DATABASE
 app.get("/urls.json", (req, res) => {
   rejectUnauthenticatedUser(req, res)
-  res.json(urlsForUser(req.cookies["user_id"]));
+  return res.json(urlsForUser(req.session.user_id));
 });
 
 
 //HELLO PAGE
 app.get("/hello", (req, res) => {
-  res.send("<html><body>Hello <b>World</b></body></html>\n");
+  return res.send("<html><body>Hello <b>World</b></body></html>\n");
 });
 
 
@@ -127,10 +127,10 @@ app.get("/hello", (req, res) => {
 app.get("/urls", (req, res) => {
   rejectUnauthenticatedUser(req, res)
   
-  const userID = req.cookies["user_id"]
-  const templateVars = { urls: urlsForUser(userID), user: users[userID] };
+  const user_id = req.session.user_id
+  const templateVars = { urls: urlsForUser(user_id), user: users[user_id] };
   
-  res.render("urls_index", templateVars);    
+  return res.render("urls_index", templateVars);    
 });
 
 
@@ -138,10 +138,10 @@ app.get("/urls", (req, res) => {
 app.get("/urls/new", (req, res) => {
   rejectUnauthenticatedUser(req, res)
   
-  const currentUser = users[req.cookies["user_id"]];
+  const currentUser = users[req.session.user_id];
   const templateVars = { user: currentUser }
   
-  res.render("urls_new", templateVars);
+  return res.render("urls_new", templateVars);
 });
 
 
@@ -151,7 +151,7 @@ app.get("/urls/:shortURL", (req, res) => {
   rejectUnauthorisedUser(req, res)
 
   const shortURL = req.params.shortURL
-  const foundRecord = urlsForUser(req.cookies["user_id"])
+  const foundRecord = urlsForUser(req.session.user_id)
   
   if (!foundRecord) {
     return res.send(`Unable to find a record with short URL ${shortURL}.`)
@@ -160,10 +160,10 @@ app.get("/urls/:shortURL", (req, res) => {
   const templateVars = {
     shortURL,
     longURL: foundRecord.longURL,
-    user: users[req.cookies["user_id"]]
+    user: users[req.session.user_id]
   };
   
-  res.render("urls_show", templateVars);
+  return res.render("urls_show", templateVars);
 });
 
 
@@ -171,7 +171,7 @@ app.get("/urls/:shortURL", (req, res) => {
 app.get("/u/:shortURL", (req, res) => {  
   const longURL = urlDatabase[req.params.shortURL].longURL
 
-  res.redirect(longURL);
+  return res.redirect(longURL);
 });
 
 
@@ -182,21 +182,21 @@ app.get("/urls/:shortURL/edit", (req, res) => {
   
   const shortURL = req.params.shortURL
   
-  res.redirect(`/urls/${shortURL}`)
+  return res.redirect(`/urls/${shortURL}`)
 })
 
 
 //RENDERING REGISTRATION PAGE
 app.get("/register", (req, res) => {
-  const templateVars = { user: users[req.cookies["user_id"]]  }
-  res.render("registration", templateVars);
+  const templateVars = { user: users[req.session.user_id]  }
+  return res.render("registration", templateVars);
 });
 
 
 //RENDERING LOGIN FORM PAGE
 app.get("/login", (req, res) => {
-  const templateVars = { user: users[req.cookies["user_id"]]  }
-  res.render("login_form", templateVars);
+  const templateVars = { user: users[req.session.user_id]  }
+  return res.render("login_form", templateVars);
 });
 
 
@@ -209,11 +209,11 @@ app.post("/urls", (req, res) => {
   const shortURL = generateRandomString()
   const newDatabaseEntry = {
     longURL: req.body.longURL,
-    userID: req.cookies.user_id
+    user_id: req.session.user_id
   }
   urlDatabase[shortURL] = newDatabaseEntry
 
-  res.redirect(`/urls/${shortURL}`);
+  return res.redirect(`/urls/${shortURL}`);
 });
 
 
@@ -226,7 +226,7 @@ app.post("/urls/:shortURL/delete", (req, res) => {
 
   delete urlDatabase[shortURL]
 
-  res.redirect('/urls/');
+  return res.redirect('/urls/');
 });
 
 
@@ -235,9 +235,11 @@ app.post("/urls/:shortURL", (req, res) => {
   rejectUnauthenticatedUser(req, res)
   rejectUnauthorisedUser(req, res)
 
+  const shortURL = req.params.shortURL
+
   urlDatabase[shortURL].longURL = req.body.longURL
 
-  res.redirect('/urls');
+  return res.redirect('/urls');
 })
 
 
@@ -248,25 +250,25 @@ app.post("/login", (req, res) => {
   const user = findUserByEmail(email)
   
   if (email === "" || password === "") {
-    res.send("404 Error. Email and/or Password was blank")
+    return res.send("404 Error. Email and/or Password was blank")
   }
 
   // if (!user || user.password !== password) {
     if (!user || !bcrypt.compare(password, user.password)) {
-      res.send("403 Error")
+      return res.send("403 Error")
   }
 
-  res.cookie('user_id', user.id)
-  res.redirect('/urls');
-  console.log("After login users object: ", users)
+  req.session.user_id = user.id
+
+  return res.redirect('/urls');
 })
 
 
 //LOGOUT CLEARS THE user_id COOKIE - REDIRECTS TO /urls
 app.post("/logout", (req, res) => {
-  res.clearCookie("user_id")
+  req.session = null
 
-  res.redirect('/urls');
+  return res.redirect('/urls');
 })
 
 
@@ -286,18 +288,21 @@ app.post("/register", (req, res) => {
     return res.send("404 Error. Email is already in use.")
   }
 
-  const newUser = {
-  id,
-  email,
-  password: hashedPassword,
+  if (!user) {
+    const user = id
+  
+    const newUser = {
+    id,
+    email,
+    password: hashedPassword,
+    }
+
+    users[id] = newUser 
+
+    req.session.user_id = user.id
+
+    return res.redirect('/urls');
   }
-
-  users[id] = newUser 
-
-  res.cookie('user_id', newUser.id)
-
-  res.redirect('/urls');
-  console.log("After registration users object: ", users)
 })
 
 
