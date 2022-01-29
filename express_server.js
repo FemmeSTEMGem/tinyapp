@@ -1,4 +1,5 @@
-//TODO: Fix "Cannot set headers after they are sent to the client" error - login/logout and/or register
+// TODO: Fix "Cannot set headers after they are sent to the client" error - login/logout and/or register
+
 
 //------------------------------------------MODULES/LIBRARIES-----------------------------------------//
 
@@ -17,6 +18,8 @@ app.use(cookieSession({
 }));
 
 const bcrypt = require('bcryptjs');
+
+const { findUserByEmail } = require('./helpers.js');
 
 
 //----------------------------------------------STORAGE-----------------------------------------//
@@ -46,7 +49,9 @@ const users = {
   }
 }
 
+
 //----------------------------------------------HELPER FUNCTIONS-----------------------------------------//
+
 
 
 function generateRandomString() {
@@ -55,15 +60,6 @@ function generateRandomString() {
 
 function generateRandomID() {
   return Math.floor(Math.random() * 2000) + 1
-}
-
-const findUserByEmail = (email, database) => {
-  for (let user_id in database) {
-    const user = database[user_id]
-    if (user.email === email)
-    return user
-  }
-  return null
 }
 
 const urlsForUser = (id) => {
@@ -101,8 +97,6 @@ const rejectUnauthorisedUser = (req, res) => {
     return res.send('Unauthorised access')
   }
 }
-
-
 //----------------------------------------------GETS-----------------------------------------//
 
 
@@ -308,8 +302,13 @@ app.post("/register", (req, res) => {
 })
 
 
-//----------------------------------------------LISTEN-----------------------------------------//
+//----------------------------------------------MISCELLANEOUS-----------------------------------------//
 
 app.listen(PORT, () => {
   console.log(`Example app listening on port ${PORT}!`);
 });
+
+
+module.exports = { 
+  urlDatabase
+}
