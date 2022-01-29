@@ -1,3 +1,5 @@
+//TODO: Fix "Cannot set headers after they are sent to the client" error - login/logout and/or register
+
 //------------------------------------------MODULES/LIBRARIES-----------------------------------------//
 
 const express = require("express");
@@ -55,9 +57,9 @@ function generateRandomID() {
   return Math.floor(Math.random() * 2000) + 1
 }
 
-const findUserByEmail = (email) => {
-  for (let user_id in users) {
-    const user = users[user_id]
+const findUserByEmail = (email, database) => {
+  for (let user_id in database) {
+    const user = database[user_id]
     if (user.email === email)
     return user
   }
@@ -247,7 +249,7 @@ app.post("/urls/:shortURL", (req, res) => {
 app.post("/login", (req, res) => {
   const email = req.body.email
   const password = req.body.password
-  const user = findUserByEmail(email)
+  const user = findUserByEmail(email, users)
   
   if (email === "" || password === "") {
     return res.send("404 Error. Email and/or Password was blank")
@@ -278,7 +280,7 @@ app.post("/register", (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
   const hashedPassword = bcrypt.hashSync(password, 10);
-  const user = findUserByEmail(email)
+  const user = findUserByEmail(email, users)
 
   if (email === "" || password === "") {
     return res.send("404 Error. Email and/or Password was blank")
