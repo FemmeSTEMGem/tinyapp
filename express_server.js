@@ -80,7 +80,7 @@ const rejectUnauthenticatedUser = (req, res) => {
   const user_id = req.session.user_id
 
   if (!user_id) {
-    return res.send('Please login first')
+    return true
   }
 }
 
@@ -90,11 +90,11 @@ const rejectUnauthorisedUser = (req, res) => {
   const foundRecord = urlDatabase[shortURL]
 
   if (!foundRecord || foundRecord.user_id !== user_id) {
-    return res.send('Not found')
+    return true
   }
 
   if (user_id !== foundRecord.user_id) {
-    return res.send('Unauthorised access')
+    return true
   }
 }
 //----------------------------------------------GETS-----------------------------------------//
@@ -102,13 +102,19 @@ const rejectUnauthorisedUser = (req, res) => {
 
 //MAIN PAGE
 app.get("/", (req, res) => {
-  return res.send("Hello, welcome to the Main Page!");
+  if (rejectUnauthenticatedUser(req, res)) {
+    return res.redirect("/login")
+  }
+
+  return res.redirect("/urls")
 });
 
 
 //URL DATABASE
 app.get("/urls.json", (req, res) => {
-  rejectUnauthenticatedUser(req, res)
+  if (rejectUnauthenticatedUser(req, res)) {
+    return res.redirect("/login")
+  }
   return res.json(urlsForUser(req.session.user_id));
 });
 
@@ -121,7 +127,9 @@ app.get("/hello", (req, res) => {
 
 //RENDERING URLS INDEX PAGE
 app.get("/urls", (req, res) => {
-  rejectUnauthenticatedUser(req, res)
+  if (rejectUnauthenticatedUser(req, res)) {
+    return res.send("<html><body>401 Unauthorized - Please login first</b></body></html>\n")
+  }
   
   const user_id = req.session.user_id
   const templateVars = { urls: urlsForUser(user_id), user: users[user_id] };
@@ -132,8 +140,10 @@ app.get("/urls", (req, res) => {
 
 //RENDERING URLS NEW PAGE
 app.get("/urls/new", (req, res) => {
-  rejectUnauthenticatedUser(req, res)
-  
+  if (rejectUnauthenticatedUser(req, res)) {
+    return res.redirect("/login")
+  }
+
   const currentUser = users[req.session.user_id];
   const templateVars = { user: currentUser }
   
@@ -143,19 +153,24 @@ app.get("/urls/new", (req, res) => {
 
 //RENDERING URLS SHOW PAGE - in Compass, this is referred to as /urls/:id
 app.get("/urls/:shortURL", (req, res) => {
-  rejectUnauthenticatedUser(req, res)
-  rejectUnauthorisedUser(req, res)
+  if (rejectUnauthenticatedUser(req, res)) {
+    return res.send('<html><body>You must be logged in to view this page.</b></body></html>\n')
+  }
+
+  if (rejectUnauthorisedUser(req, res)) {
+    return res.send('<html><body>You are not authorised to view this content.</b></body></html>\n')
+  }
 
   const shortURL = req.params.shortURL
   const foundRecord = urlsForUser(req.session.user_id)
-  
-  if (!foundRecord) {
-    return res.send(`Unable to find a record with short URL ${shortURL}.`)
+
+  if (!foundRecord || !foundRecord[shortURL]) {
+    return res.send(`<html><body>Unable to find a record with short URL ${shortURL}.</b></body></html>\n`)
   }
   
   const templateVars = {
     shortURL,
-    longURL: foundRecord.longURL,
+    longURL: foundRecord[shortURL].longURL,
     user: users[req.session.user_id]
   };
   
@@ -164,7 +179,11 @@ app.get("/urls/:shortURL", (req, res) => {
 
 
 //u/:shortURL REDIRECTS TO longURL
-app.get("/u/:shortURL", (req, res) => {  
+app.get("/u/:shortURL", (req, res) => {
+  if (!urlDatabase[req.params.shortURL]) {
+    return res.send(`<html><body>Unable to find a record with short URL ${req.params.shortURL}.</b></body></html>\n`)
+  }
+
   const longURL = urlDatabase[req.params.shortURL].longURL
 
   return res.redirect(longURL);
@@ -173,17 +192,21 @@ app.get("/u/:shortURL", (req, res) => {
 
 //urls/:shortURL/edit REDIRECTS TO urls/shortURL
 app.get("/urls/:shortURL/edit", (req, res) => {
-  rejectUnauthenticatedUser(req, res)
-  rejectUnauthorisedUser(req, res)
+  if (!rejectUnauthenticatedUser(req, res) && !rejectUnauthorisedUser(req, res)) {
   
   const shortURL = req.params.shortURL
   
   return res.redirect(`/urls/${shortURL}`)
+  }
 })
 
 
 //RENDERING REGISTRATION PAGE
 app.get("/register", (req, res) => {
+  if (!rejectUnauthenticatedUser(req, res)) {
+    res.redirect('/urls')
+  }
+
   const templateVars = { user: users[req.session.user_id]  }
   return res.render("registration", templateVars);
 });
@@ -191,6 +214,9 @@ app.get("/register", (req, res) => {
 
 //RENDERING LOGIN FORM PAGE
 app.get("/login", (req, res) => {
+  if (!rejectUnauthenticatedUser(req, res)) {
+    res.redirect('/urls')
+  }
   const templateVars = { user: users[req.session.user_id]  }
   return res.render("login_form", templateVars);
 });
@@ -200,7 +226,9 @@ app.get("/login", (req, res) => {
 
 //CREATES SHORT URL
 app.post("/urls", (req, res) => {
-  rejectUnauthenticatedUser(req, res)
+  if (rejectUnauthenticatedUser(req, res)) {
+    return res.send('<html><body>You must be logged in to view this page.</b></body></html>\n')
+  }
   
   const shortURL = generateRandomString()
   const newDatabaseEntry = {
@@ -215,8 +243,13 @@ app.post("/urls", (req, res) => {
 
 //DELETES A RECORD - REDIRECT TO /urls
 app.post("/urls/:shortURL/delete", (req, res) => {
-  rejectUnauthenticatedUser(req, res)
-  rejectUnauthorisedUser(req, res)
+  if (rejectUnauthenticatedUser(req, res)) {
+    return res.send('<html><body>You must be logged in to perform this operation.</b></body></html>\n')
+  }
+  
+  if (rejectUnauthorisedUser(req, res)) {
+    return res.send('<html><body>You are not authorised to perform this operation.</b></body></html>\n')
+  }
 
   const shortURL = req.params.shortURL
 
@@ -228,8 +261,13 @@ app.post("/urls/:shortURL/delete", (req, res) => {
 
 //EDITS A longURL - REDIRECTS TO /urls
 app.post("/urls/:shortURL", (req, res) => {
-  rejectUnauthenticatedUser(req, res)
-  rejectUnauthorisedUser(req, res)
+  if (rejectUnauthenticatedUser(req, res)) {
+    return res.send('<html><body>You must be logged in to view this page.</b></body></html>\n')
+  }
+  
+  if (rejectUnauthorisedUser(req, res)) {
+    return res.send('<html><body>You are not authorised to view this content.</b></body></html>\n')
+  }
 
   const shortURL = req.params.shortURL
 
@@ -244,19 +282,24 @@ app.post("/login", (req, res) => {
   const email = req.body.email
   const password = req.body.password
   const user = findUserByEmail(email, users)
+
   
   if (email === "" || password === "") {
-    return res.send("404 Error. Email and/or Password was blank")
+    return res.send('<html><body>404 Error. Email and/or Password was blank.</b></body></html>\n')
   }
 
   // if (!user || user.password !== password) {
-    if (!user || !bcrypt.compare(password, user.password)) {
-      return res.send("403 Error")
+    if (!user || !bcrypt.compareSync(password, user.password)) {
+      return res.send('<html><body>403 error</b></body></html>\n')
   }
+
+  console.log("user: ", user)
+  console.log(bcrypt.compareSync(password, user.password))
 
   req.session.user_id = user.id
 
   return res.redirect('/urls');
+
 })
 
 
@@ -277,11 +320,11 @@ app.post("/register", (req, res) => {
   const user = findUserByEmail(email, users)
 
   if (email === "" || password === "") {
-    return res.send("404 Error. Email and/or Password was blank")
+    return res.send('<html><body>404 Error. Email and/or Password was blank.</b></body></html>\n')
   }
   
   if (user) {
-    return res.send("404 Error. Email is already in use.")
+    return res.send('<html><body>404 Error. Email is already in use.</b></body></html>\n')
   }
 
   if (!user) {
