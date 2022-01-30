@@ -4,11 +4,11 @@ TinyApp is a full stack web application built with Node and Express that allows 
 
 ## Final Product
 
-!["Screenshot of the New URLs page"](https://github.com/FemmeSTEMGem/tinyapp/blob/main/docs/new-urls-page.PNG?raw=true)
+![Screenshot of the New URLs page](https://github.com/FemmeSTEMGem/tinyapp/blob/main/docs/new-urls-page.PNG?raw=true)
 
-!["Screenshot of the Tiny URL page"](https://github.com/FemmeSTEMGem/tinyapp/blob/main/docs/tiny-url-page.PNG?raw=true)
+![Screenshot of the Tiny URL page](https://github.com/FemmeSTEMGem/tinyapp/blob/main/docs/tiny-url-page.PNG?raw=true)
 
-!["Screenshot of the URLs page"](https://github.com/FemmeSTEMGem/tinyapp/blob/main/docs/urls-page.PNG?raw=true)
+![Screenshot of the URLs page](https://github.com/FemmeSTEMGem/tinyapp/blob/main/docs/urls-page.PNG?raw=true)
 
 ## Dependencies
 
